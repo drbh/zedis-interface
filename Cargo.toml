@@ -1,0 +1,23 @@
+[package]
+name = "zedis-server"
+version = "0.1.0"
+authors = ["David Holtz <david.richard.holtz@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "1.0.0"
+
+bytes = "0.4"
+futures = "0.1"
+env_logger = "*"
+
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = "1.0"
+json = "*"
+
+zmq = "0.9"
+
+web-view = "0.4.5"
