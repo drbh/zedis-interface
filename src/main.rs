@@ -1,22 +1,17 @@
 #![windows_subsystem = "windows"]
-
 use std::thread;
-
 extern crate web_view;
-
 use web_view::*;
-
-// #[macro_use]
 extern crate json;
-
 use actix_web::http::StatusCode;
-use actix_web::{middleware, web, App, HttpResponse, HttpServer};
+use actix_web::{web, App, HttpResponse, HttpServer};
 use serde_derive::{Deserialize, Serialize};
+// use actix_web::{middleware};
 
 pub static mut DB: Option<zmq::Socket> = None;
 
 #[derive(Debug, Serialize, Deserialize)]
-struct MyObj {
+struct IncommingRequest {
     command: String,
     key: Option<String>,
     value: Option<String>,
@@ -31,81 +26,81 @@ fn homepage() -> HttpResponse {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.4.2/react.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.4.2/react-dom.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.21.1/babel.min.js"></script>
-
 <style>
-html {
-    font-family: 'Source Code Pro', monospace;
-}
-pre {
-    padding: 5px;
-    font-size: 1.2em;
-    white-space: pre-wrap;       /* css-3 */
-    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
-    white-space: -pre-wrap;      /* Opera 4-6 */
-    white-space: -o-pre-wrap;    /* Opera 7 */
-    word-wrap: break-word;       /* Internet Explorer 5.5+ */
-}
-hr {
-    width: 36vw;
-}
-ul {
-    list-style: none;
-}
-li {
-    padding-top: 3vh;
-    height: 5vh;
-}
-h3 {
-    padding-left: 2vw;
-    color: #FFE600;
-}
-.top {
-    position: absolute;
-    top: 0;
-    background: #5E44FF;
-    height: 8vh;
-    width: 100vw;
-    z-index: 99;
-}
-.bottom {
-    position: absolute;
-    top: 8vh;
-    height: 92vh;
-}
-.main {
-    display: flex;
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-}
-.keyWindow {
-    background: #ddd;
-    overflow-x: hidden;
-    overflow-y: scroll;
-    position: absolute;
-    height: 100%;
-    width: 45vw;
-}
-.valueWindow {
-    position: absolute;
-    left: 45vw;
-    width: 55vw;
-    height: 100%;
-    color: #FFE600;
-    background: #222;
-}
-.currentlyViewing {
-    color: #5E44FF;
-    font-weight: bold;
-    font-size: 1.05em;
-}
+    html {
+        font-family: 'Source Code Pro', monospace;
+    }
+    pre {
+        padding: 5px;
+        font-size: 1.2em;
+        
+        white-space: pre-wrap;       /* css-3 */
+        white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+        white-space: -pre-wrap;      /* Opera 4-6 */
+        white-space: -o-pre-wrap;    /* Opera 7 */
+        word-wrap: break-word;       /* Internet Explorer 5.5+ */
+    }
+    hr {
+        width: 36vw;
+    }
+    ul {
+        list-style: none;
+    }
+    li {
+        padding-top: 3vh;
+        height: 5vh;
+    }
+    h3 {
+        padding-left: 2vw;
+        color: #FFE600;
+    }
+    .top {
+        position: absolute;
+        top: 0;
+        background: #5E44FF;
+        height: 8vh;
+        width: 100vw;
+        z-index: 99;
+    }
+    .bottom {
+        position: absolute;
+        top: 8vh;
+        height: 92vh;
+    }
+    .main {
+        display: flex;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+    }
+    .keyWindow {
+        background: #ddd;
+        overflow-x: hidden;
+        overflow-y: scroll;
+        position: absolute;
+        height: 100%;
+        width: 45vw;
+    }
+    .valueWindow {
+        overflow-x: hidden;
+        overflow-y: scroll;
+        position: absolute;
+        left: 45vw;
+        width: 55vw;
+        height: 100%;
+        color: #FFE600;
+        background: #222;
+    }
+    .currentlyViewing {
+        color: #5E44FF;
+        font-weight: bold;
+        font-size: 1.05em;
+    }
 </style>
-
-
 <script type="text/babel">
-class Greeting extends React.Component {
+    class Greeting extends React.Component {
 
 
     constructor(props) {
@@ -157,23 +152,18 @@ class Greeting extends React.Component {
         })
         .then(response => {
             response.text().then(r =>{
-
-try {
-  this.setState({currentValue: JSON.parse(r), currentKey: currentKey})
-}
-catch(error) {
-  this.setState({currentValue: r, currentKey: currentKey})
-}
-
-                
+                try {
+                  this.setState({currentValue: JSON.parse(r), currentKey: currentKey})
+                }
+                catch(error) {
+                  this.setState({currentValue: r, currentKey: currentKey})
+                }
             })
         })
         .catch(err => {
           console.log(err);
         });
     }
-
-
     render() {
         return (
         <div className="main">
@@ -206,11 +196,10 @@ ReactDOM.render(
     document.getElementById('root')
 );
 </script>
-    "#,
-        )
+    "#)
 }
 
-fn index(item: web::Json<MyObj>) -> HttpResponse {
+fn wire(item: web::Json<IncommingRequest>) -> HttpResponse {
     let mut command_for_zedis: String = "".to_string();
     match item.command.as_ref() {
         "GET" => {
@@ -253,7 +242,7 @@ fn index(item: web::Json<MyObj>) -> HttpResponse {
         .body(resp)
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), web_view::Error> {
     std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
 
@@ -264,26 +253,23 @@ fn main() -> std::io::Result<()> {
     unsafe { DB = Some(socket) }
 
     thread::spawn(move || {
-        web_view::builder()
-            .title("zedis server viewer")
-            .content(Content::Url("http://localhost:8080"))
-            .size(800, 600)
-            .resizable(true)
-            .debug(true)
-            .user_data(())
-            .invoke_handler(|_webview, _arg| Ok(()))
-            .run()
-            .unwrap();
+        HttpServer::new(|| {
+            App::new()
+                // .wrap(middleware::Logger::default())
+                .data(web::JsonConfig::default().limit(4096)) // <- limit size of the payload (global configuration)
+                .service(web::resource("/").route(web::get().to(homepage)))
+                .service(web::resource("/wire").route(web::post().to(wire)))
+        })
+        .bind("127.0.0.1:8080")?
+        .run()
     });
-
-    println!("{:?}", "here");
-    HttpServer::new(|| {
-        App::new()
-            // .wrap(middleware::Logger::default())
-            .data(web::JsonConfig::default().limit(4096)) // <- limit size of the payload (global configuration)
-            .service(web::resource("/").route(web::get().to(homepage)))
-            .service(web::resource("/wire").route(web::post().to(index)))
-    })
-    .bind("127.0.0.1:8080")?
-    .run()
+    web_view::builder()
+        .title("zedis server viewer")
+        .content(Content::Url("http://localhost:8080"))
+        .size(800, 600)
+        .resizable(true)
+        .debug(true)
+        .user_data(())
+        .invoke_handler(|_webview, _arg| Ok(()))
+        .run()
 }
